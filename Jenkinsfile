@@ -24,7 +24,7 @@ pipeline {
                     . .venv/bin/activate
                     pip install --upgrade pip
                     pip install bandit
-                    bandit -r . -x ./sample_certificates --severity-level medium
+                    bandit -r . -x ./.venv,./sample_certificates --severity-level medium
                 '''
             }
         }
