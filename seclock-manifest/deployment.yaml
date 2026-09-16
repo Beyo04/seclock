@@ -15,6 +15,8 @@ spec:
       labels:
         app: seclock
     spec:
+      imagePullSecrets:
+      - name: ecr-secret
       containers:
       - name: seclock
         image: 754660694286.dkr.ecr.ap-south-1.amazonaws.com/seclock:11
