@@ -6,7 +6,6 @@
         AWS_ACCOUNT_ID     = '754660694286'
         ECR_REPO_NAME      = 'seclock'
         IMAGE_TAG          = "${BUILD_NUMBER}"
-        GITOPS_REPO_URL    = 'github.com/Beyo04/seclock-gitops.git'
         GIT_CREDENTIALS_ID = 'github-credentials'
         AWS_CREDENTIAL_ID  = 'aws-ecr-credentials'
     }
@@ -47,12 +46,19 @@
         stage('DAST - OWASP ZAP Scan') {
             steps {
                 sh """
+                    # Spin up temporary container for dynamic testing
                     docker run -d --name seclock-dast-target -p 8080:8080 ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                    
+                    # Allow app initialization
                     sleep 5
+
+                    # Run baseline scan against documentation/API endpoint
                     docker run --rm --network="host" -v \$(pwd):/zap/wrk/:rw zaproxy/zap-stable zap-baseline.py \
                         -t http://localhost:8080/docs \
                         -r zap_report.html \
                         -I || true
+
+                    # Clean up testing container
                     docker stop seclock-dast-target
                     docker rm seclock-dast-target
                 """
@@ -86,18 +92,15 @@
             }
         }
 
-        stage('Update GitOps Repo') {
+        stage('Update Manifest Tag') {
             steps {
                 withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                     sh """
-                        rm -rf gitops-repo
-                        git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@${GITOPS_REPO_URL} gitops-repo
-                        cd gitops-repo/k8s
-                        sed -i "s|image:.*|image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}|g" deployment.yaml
+                        sed -i "s|image:.*|image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}|g" seclock-manifest/deployment.yaml
                         git config user.email "jenkins@devsecops.local"
                         git config user.name "Jenkins DevSecOps"
-                        git commit -am "chore(deploy): bump seclock image to tag ${IMAGE_TAG}" || echo "No changes to commit"
-                        git push origin main
+                        git commit -am "chore(deploy): bump image tag to ${IMAGE_TAG} [ci skip]" || echo "No changes to commit"
+                        git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/Beyo04/seclock.git HEAD:main
                     """
                 }
             }
