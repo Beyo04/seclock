@@ -50,21 +50,21 @@ pipeline {
         stage('DAST - OWASP ZAP Scan') {
             steps {
                 sh """
-                    # Spin up temporary container for dynamic testing
-                    docker run -d --name seclock-dast-target -p 8080:8080 ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                    # Spin up temporary container on host port 8085 to avoid Jenkins 8080 collision
+                    docker run -d --name seclock-dast-target -p 8085:8080 ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
                     
                     # Allow app initialization
                     sleep 5
 
-                    # Run baseline scan against documentation/API endpoint
+                    # Run baseline scan against port 8085
                     docker run --rm --network="host" -v \$(pwd):/zap/wrk/:rw zaproxy/zap-stable zap-baseline.py \
-                        -t http://localhost:8080/docs \
+                        -t http://localhost:8085/docs \
                         -r zap_report.html \
                         -I || true
 
                     # Clean up testing container
-                    docker stop seclock-dast-target
-                    docker rm seclock-dast-target
+                    docker stop seclock-dast-target || true
+                    docker rm seclock-dast-target || true
                 """
             }
             post {
