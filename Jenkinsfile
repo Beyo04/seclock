@@ -6,7 +6,7 @@ pipeline {
         AWS_ACCOUNT_ID     = '754660694286'
         ECR_REPO_NAME      = 'seclock'
         IMAGE_TAG          = "${BUILD_NUMBER}"
-        GIT_CREDENTIALS_ID = 'github-credentials'
+        GIT_CREDENTIAL_ID  = 'github-credentials'
         AWS_CREDENTIAL_ID  = 'aws-ecr-credentials'
     }
 
@@ -34,7 +34,7 @@ pipeline {
                 sh '''
                     . .venv/bin/activate
                     pip install pip-audit
-                    pip_audit -r requirements.txt
+                    pip-audit -r requirements.txt
                 '''
             }
         }
@@ -102,7 +102,7 @@ pipeline {
         stage('Update Manifest Tag') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: "${GIT_CREDENTIALS_ID}",
+                    credentialsId: "${GIT_CREDENTIAL_ID}",
                     passwordVariable: 'GIT_PASSWORD',
                     usernameVariable: 'GIT_USERNAME'
                 )]) {
