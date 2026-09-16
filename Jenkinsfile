@@ -20,8 +20,11 @@ pipeline {
         stage('SAST - Bandit') {
             steps {
                 sh '''
-                    python3 -m pip install bandit
-                    python3 -m bandit -r . -x ./sample_certificates --severity-level medium
+                    python3 -m venv .venv
+                    . .venv/bin/activate
+                    pip install --upgrade pip
+                    pip install bandit
+                    bandit -r . -x ./sample_certificates --severity-level medium
                 '''
             }
         }
@@ -29,8 +32,9 @@ pipeline {
         stage('SCA - Pip Audit') {
             steps {
                 sh '''
-                    python3 -m pip install pip-audit
-                    python3 -m pip_audit -r requirements.txt
+                    . .venv/bin/activate
+                    pip install pip-audit
+                    pip_audit -r requirements.txt
                 '''
             }
         }
